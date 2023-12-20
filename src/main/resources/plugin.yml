@@ -1,0 +1,4 @@
+name: PaintballGame
+version: '${project.version}'
+main: com.cosmolotl.paintballgame.PaintballGame
+api-version: '1.20'
