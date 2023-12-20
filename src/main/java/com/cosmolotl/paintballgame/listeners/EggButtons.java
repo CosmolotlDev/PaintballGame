@@ -2,13 +2,12 @@ package com.cosmolotl.paintballgame.listeners;
 
 import com.cosmolotl.paintballgame.PaintballGame;
 import com.cosmolotl.paintballgame.enums.Gamemode;
+import com.cosmolotl.paintballgame.enums.maps.DeathmatchMap;
+import com.cosmolotl.paintballgame.enums.maps.TurfWarMap;
+import com.cosmolotl.paintballgame.games.deathmatch.Deathmatch;
 import com.cosmolotl.paintballgame.items.MarkerEggsMaker;
 import com.cosmolotl.paintballgame.managers.GameManager;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.World;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Marker;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -17,6 +16,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 public class EggButtons implements Listener {
 
@@ -59,18 +59,12 @@ public class EggButtons implements Listener {
 
                     // Join Deathmatch
                     case "Deathmatch":
-                        paintballGame.getGameManager().createGame(Gamemode.DEATHMATCH);
-                        player.getInventory().clear();
-                        player.getInventory().setItem(0, markerMaker.MarkerEgg("Start", Material.CREEPER_SPAWN_EGG));
-                        player.getInventory().setItem(1, markerMaker.MarkerEgg("Reset", Material.STRIDER_SPAWN_EGG));
+                        mapSelection(Gamemode.DEATHMATCH, player);
                         break;
 
                     // Join Turfwar
                     case "TurfWar":
-                        paintballGame.getGameManager().createGame(Gamemode.TURFWAR);
-                        player.getInventory().clear();
-                        player.getInventory().setItem(0, markerMaker.MarkerEgg("Start", Material.CREEPER_SPAWN_EGG));
-                        player.getInventory().setItem(1, markerMaker.MarkerEgg("Reset", Material.STRIDER_SPAWN_EGG));
+                        mapSelection(Gamemode.TURFWAR, player);
                         break;
 
                     // Remove All
@@ -87,9 +81,17 @@ public class EggButtons implements Listener {
 
                     // Marker Makers
                     default:
+                        if (item.getType().equals(Material.PARROT_SPAWN_EGG)){
+                            player.getInventory().clear();
+                            createGame(item);
+                            startStopGame(player);
+                        }
+
+                        /*
                         Marker locationMarker = (Marker) player.getWorld().spawnEntity(player.getLocation(), EntityType.MARKER);
                         locationMarker.setCustomName(player.getInventory().getItemInMainHand().getItemMeta().getDisplayName());
                         System.out.println(player.getInventory().getItemInMainHand().getItemMeta().getDisplayName());
+                         */
                 }
             }
         }
@@ -100,5 +102,49 @@ public class EggButtons implements Listener {
         player.getInventory().setItem(0, markerMaker.MarkerEgg("Deathmatch", Material.SKELETON_HORSE_SPAWN_EGG));
         player.getInventory().setItem(1, markerMaker.MarkerEgg("TurfWar", Material.SKELETON_HORSE_SPAWN_EGG));
         player.getInventory().setItem(8, markerMaker.MarkerEgg("Edit", Material.SQUID_SPAWN_EGG));
+    }
+
+    public void mapSelection (Gamemode gamemode, Player player){
+        player.getInventory().clear();
+
+        switch (gamemode){
+            case DEATHMATCH:
+                for (DeathmatchMap map : DeathmatchMap.values()){
+                    ItemStack mapButton = markerMaker.MarkerEgg(map.name(), Material.PARROT_SPAWN_EGG);
+                    ItemMeta mapMeta = mapButton.getItemMeta();
+                    mapMeta.setLocalizedName("Deathmatch");
+                    mapButton.setItemMeta(mapMeta);
+                    player.getInventory().addItem(mapButton);
+                }
+                break;
+            case TURFWAR:
+                for (TurfWarMap map : TurfWarMap.values()){
+                    ItemStack mapButton = markerMaker.MarkerEgg(map.name(), Material.PARROT_SPAWN_EGG);
+                    ItemMeta mapMeta = mapButton.getItemMeta();
+                    mapMeta.setLocalizedName("TurfWar");
+                    mapButton.setItemMeta(mapMeta);
+                    player.getInventory().addItem(mapButton);
+                }
+                break;
+        }
+    }
+
+    public void createGame (ItemStack item){
+        ItemMeta itemMeta = item.getItemMeta();
+        switch (itemMeta.getLocalizedName()){
+            case "Deathmatch":
+                paintballGame.getGameManager().createDeathMatch(DeathmatchMap.valueOf(itemMeta.getDisplayName()));
+                break;
+            case "TurfWar":
+                paintballGame.getGameManager().createTurfWarMatch(TurfWarMap.valueOf(itemMeta.getDisplayName()));
+                break;
+        }
+
+    }
+
+    public void startStopGame (Player player) {
+        player.getInventory().clear();
+        player.getInventory().setItem(0, markerMaker.MarkerEgg("Start", Material.CREEPER_SPAWN_EGG));
+        player.getInventory().setItem(1, markerMaker.MarkerEgg("Reset", Material.STRIDER_SPAWN_EGG));
     }
 }

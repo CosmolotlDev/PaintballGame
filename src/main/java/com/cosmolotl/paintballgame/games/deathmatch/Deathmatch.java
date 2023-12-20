@@ -4,6 +4,7 @@ import com.cosmolotl.paintballgame.PaintballGame;
 import com.cosmolotl.paintballgame.enums.GameState;
 import com.cosmolotl.paintballgame.enums.PlayerSelector;
 import com.cosmolotl.paintballgame.enums.Team;
+import com.cosmolotl.paintballgame.enums.maps.DeathmatchMap;
 import com.cosmolotl.paintballgame.instance.Game;
 import com.cosmolotl.paintballgame.items.BulletMaker;
 import com.cosmolotl.paintballgame.items.GunMaker;
@@ -30,6 +31,7 @@ public class Deathmatch extends Game {
 
     private PaintballGame paintballGame;
     private GameManager gameManager;
+    private DeathmatchMap deathmatchMap;
 
     private Random rnd = new Random();
     private GunMaker gunMaker = new GunMaker();
@@ -47,10 +49,11 @@ public class Deathmatch extends Game {
 
     private BossBar bossBar;
 
-    public Deathmatch(PaintballGame paintballGame, GameManager gameManager) {
+    public Deathmatch(PaintballGame paintballGame, GameManager gameManager, DeathmatchMap deathmatchMap) {
         super(paintballGame, gameManager);
         this.paintballGame = paintballGame;
         this.gameManager = gameManager;
+        this.deathmatchMap = deathmatchMap;
 
         Bukkit.getPluginManager().registerEvents(gunListener, paintballGame);
 

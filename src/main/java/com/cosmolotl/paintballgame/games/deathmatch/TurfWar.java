@@ -4,6 +4,7 @@ import com.cosmolotl.paintballgame.PaintballGame;
 import com.cosmolotl.paintballgame.enums.GameState;
 import com.cosmolotl.paintballgame.enums.PlayerSelector;
 import com.cosmolotl.paintballgame.enums.Team;
+import com.cosmolotl.paintballgame.enums.maps.TurfWarMap;
 import com.cosmolotl.paintballgame.games.gamelisteners.GunListener;
 import com.cosmolotl.paintballgame.instance.Game;
 import com.cosmolotl.paintballgame.items.BulletMaker;
@@ -32,6 +33,7 @@ public class TurfWar extends Game {
 
     private PaintballGame paintballGame;
     private GameManager gameManager;
+    private TurfWarMap turfWarMap;
 
     private Random rnd = new Random();
     private GunMaker gunMaker = new GunMaker();
@@ -50,10 +52,11 @@ public class TurfWar extends Game {
     private GameState gameState;
     private BossBar bossBar;
 
-    public TurfWar(PaintballGame paintballGame, GameManager gameManager) {
+    public TurfWar(PaintballGame paintballGame, GameManager gameManager, TurfWarMap turfWarMap) {
         super(paintballGame, gameManager);
         this.paintballGame = paintballGame;
         this.gameManager = gameManager;
+        this.turfWarMap = turfWarMap;
 
         Bukkit.getPluginManager().registerEvents(gunListener, paintballGame);
 

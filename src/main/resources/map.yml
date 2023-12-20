@@ -1,0 +1,32 @@
+maps:
+  test_world:
+    spawn:
+      x: -502
+      y: 101
+      z: 615
+      yaw: -90
+      pitch: 0
+    1:
+      x: -502
+      y: 101
+      z: 615
+      yaw: -90
+      pitch: 0
+    2:
+      x: -502
+      y: 101
+      z: 615
+      yaw: -90
+      pitch: 0
+    3:
+      x: -502
+      y: 101
+      z: 615
+      yaw: -90
+      pitch: 0
+    4:
+      x: -502
+      y: 101
+      z: 615
+      yaw: -90
+      pitch: 0

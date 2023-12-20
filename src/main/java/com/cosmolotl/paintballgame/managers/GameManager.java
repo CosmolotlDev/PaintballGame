@@ -3,12 +3,13 @@ package com.cosmolotl.paintballgame.managers;
 import com.cosmolotl.paintballgame.PaintballGame;
 import com.cosmolotl.paintballgame.enums.GameState;
 import com.cosmolotl.paintballgame.enums.Gamemode;
+import com.cosmolotl.paintballgame.enums.maps.DeathmatchMap;
+import com.cosmolotl.paintballgame.enums.maps.TurfWarMap;
 import com.cosmolotl.paintballgame.games.deathmatch.Deathmatch;
 import com.cosmolotl.paintballgame.games.deathmatch.TurfWar;
 import com.cosmolotl.paintballgame.instance.Game;
 import com.cosmolotl.paintballgame.tools.MarkerTeleporter;
 import org.bukkit.Bukkit;
-import org.bukkit.entity.Marker;
 import org.bukkit.entity.Player;
 
 public class GameManager {
@@ -22,22 +23,23 @@ public class GameManager {
         this.paintballGame = paintballGame;
     }
 
-    public void createGame(Gamemode gamemode){
+    public void createDeathMatch(DeathmatchMap deathmatchMap){
         if (currentGame == null){
-            switch (gamemode){
-                case DEATHMATCH:
-                    currentGame = new Deathmatch(paintballGame, this);
-                    currentGame.setup();
-                    break;
-                case TURFWAR:
-                    currentGame = new TurfWar(paintballGame, this);
-                    currentGame.setup();
-                    break;
-            }
+            currentGame = new Deathmatch(paintballGame, this, deathmatchMap);
+            currentGame.setup();
         } else {
             System.out.println("Game is currently in progress! Can't start a new one");
         }
 
+    }
+
+    public void createTurfWarMatch(TurfWarMap turfWarMap){
+        if (currentGame == null){
+            currentGame = new TurfWar(paintballGame, this, turfWarMap);
+            currentGame.setup();
+        } else {
+            System.out.println("Game is currently in progress! Can't start a new one");
+        }
     }
 
     public void startGame(){
