@@ -1,7 +1,8 @@
 package com.cosmolotl.paintballgame.enums;
 
-public enum Gamemodes {
+public enum Gamemode {
 
-    DEATHMATCH
+    DEATHMATCH,
+    TURFWAR
 
 }

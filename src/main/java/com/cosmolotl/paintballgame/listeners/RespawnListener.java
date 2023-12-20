@@ -1,7 +1,8 @@
-package com.cosmolotl.paintballgame.games.gamelisteners;
+package com.cosmolotl.paintballgame.listeners;
 
 import com.cosmolotl.paintballgame.PaintballGame;
 import com.cosmolotl.paintballgame.instance.Game;
+import com.cosmolotl.paintballgame.managers.GameManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -24,13 +25,22 @@ public class RespawnListener implements Listener {
 
     @EventHandler
     public void onRespawn (PlayerRespawnEvent e) {
+        if (paintballGame.getGameManager().getGame() != null){
+            Bukkit.getScheduler().runTaskLater(paintballGame, new Runnable() {
+                @Override
+                public void run() {
+                    paintballGame.getGameManager().getGame().spawnPlayer(e.getPlayer(), false);
+                }
+            }, 1);
+        } else {
+            Bukkit.getScheduler().runTaskLater(paintballGame, new Runnable() {
+                @Override
+                public void run(){
+                    paintballGame.getGameManager().onJoin(e.getPlayer());
+                }
+            }, 1);
+        }
 
-        Bukkit.getScheduler().runTaskLater(paintballGame, new Runnable() {
-            @Override
-            public void run() {
-                paintballGame.getGameManager().getGame().spawnPlayer(e.getPlayer(), false);
-            }
-        }, 1);
     }
 
 }

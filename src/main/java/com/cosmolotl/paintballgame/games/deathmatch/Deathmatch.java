@@ -1,30 +1,28 @@
-package com.cosmolotl.paintballgame.games;
+package com.cosmolotl.paintballgame.games.deathmatch;
 
 import com.cosmolotl.paintballgame.PaintballGame;
+import com.cosmolotl.paintballgame.enums.GameState;
+import com.cosmolotl.paintballgame.enums.PlayerSelector;
 import com.cosmolotl.paintballgame.enums.Team;
 import com.cosmolotl.paintballgame.instance.Game;
 import com.cosmolotl.paintballgame.items.BulletMaker;
 import com.cosmolotl.paintballgame.items.GunMaker;
+import com.cosmolotl.paintballgame.games.gamelisteners.GunListener;
+import com.cosmolotl.paintballgame.items.HatMaker;
 import com.cosmolotl.paintballgame.managers.ConfigManager;
 import com.cosmolotl.paintballgame.managers.GameManager;
+import com.cosmolotl.paintballgame.tools.MarkerTeleporter;
 import com.google.common.collect.TreeMultimap;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarFlag;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
-import org.bukkit.entity.Marker;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Snowball;
-import org.bukkit.event.EventHandler;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
-import org.checkerframework.checker.units.qual.A;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import java.util.*;
 
@@ -36,11 +34,16 @@ public class Deathmatch extends Game {
     private Random rnd = new Random();
     private GunMaker gunMaker = new GunMaker();
     private BulletMaker bulletMaker = new BulletMaker();
+    private HatMaker hatMaker = new HatMaker();
+
+    Listener gunListener = new GunListener(this);
+    MarkerTeleporter markerTeleporter = new MarkerTeleporter();
+
 
     private List<UUID> players;
     private List<Team> teamList;
     private HashMap<UUID, Team> teams;
-    private HashMap<Team, Integer> points;
+    private HashMap<Team, Integer> teamPoints;
 
     private BossBar bossBar;
 
@@ -49,24 +52,30 @@ public class Deathmatch extends Game {
         this.paintballGame = paintballGame;
         this.gameManager = gameManager;
 
+        Bukkit.getPluginManager().registerEvents(gunListener, paintballGame);
+
         this.teams = new HashMap<>();
         this.teamList = new ArrayList<>();
         this.players = new ArrayList<>();
-        this.points = new HashMap<>();
+        this.teamPoints = new HashMap<>();
     }
+
+    @Override
+    public List<UUID> getPlayers() {
+        return players;
+    }
+
 
     @Override
     public void start() {
 
         // Teleport players
         for (Player player : Bukkit.getOnlinePlayers()){
-            spawnPlayer(player);
+            spawnPlayer(player, true);
+            player.sendTitle(ChatColor.DARK_PURPLE + "Deathmatch!", ChatColor.BLUE + "First team to " + ConfigManager.getDeathmatchWinReq() + " kills wins!", 10, 100, 10);
         }
 
-        // Give Weapons
-
-        // Give Players Teamed Hat
-
+        setGameState(GameState.LIVE);
         // Give Players Colored names (Tab, or NameTag)
     }
 
@@ -76,6 +85,7 @@ public class Deathmatch extends Game {
         // Add all online players
         for (Player player : Bukkit.getOnlinePlayers()){
             addPlayer(player);
+
         }
 
         createTeams();
@@ -100,34 +110,63 @@ public class Deathmatch extends Game {
                 bossBar.addPlayer(player);
             }
         }
-        // Teleport players to correct sides
+
+        setGameState(GameState.STANDBY);
     }
 
-    public void spawnPlayer (Player player) {
+    @Override
+    public void end() {
+
+    }
+
+    @Override
+    public void rejoin(Player player) {
+        spawnPlayer(player, false);
+    }
+
+    @Override
+    public void spawnPlayer(Player player, Boolean giveKit) {
         if (teams.keySet().contains(player.getUniqueId())){
         // Give Items
-            player.getInventory().addItem(gunMaker.makeBasicGun(teams.get(player.getUniqueId())));
-        // Teleport to Correct Spawn
-            List<Marker> possibleSpawn = new ArrayList<>();
-            for (Marker marker : player.getWorld().getEntitiesByClass(Marker.class)){
-                if (marker.getCustomName().contains(String.valueOf(getTeamIndex(teams.get(player.getUniqueId()))))){
-                    possibleSpawn.add(marker);
-                }
+            if (giveKit){
+                player.getInventory().addItem(gunMaker.makeBasicGun(teams.get(player.getUniqueId())));
+                player.getInventory().setHelmet(hatMaker.MakeHat(getTeam(player), true));
             }
-            System.out.println("Spawns: " + possibleSpawn.size());
-            System.out.println("Teleported: " + player.getName().toString());
-            player.teleport(possibleSpawn.get(rnd.nextInt(possibleSpawn.size())));
+
+        // Teleport to Correct Spawn
+            markerTeleporter.teleport(player, Integer.toString(getTeamIndex(getTeam(player))));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 3, 5, true, true));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 100, 3, true, true));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 100, 3, true, true));
+        } else {
+            gameManager.onJoin(player);
         }
     }
 
     public void setScore(Team team, int amount){
-        points.replace(team, amount);
+        teamPoints.replace(team, amount);
     }
 
-    public void addScore(Team team, int amount){
-        int score = points.get(team);
-        score += amount;
-        points.replace(team, score);
+    public void addScore(Player player, int amount, PlayerSelector selector){
+        Team team = getTeam(player);
+        int teamScore = teamPoints.get(team);
+
+        switch (selector){
+            case BOTH:
+                // To be made
+                break;
+            case PLAYER:
+                // To be Made
+                break;
+            case TEAM:
+                teamScore += amount;
+                break;
+        }
+        teamPoints.replace(team, teamScore);
+        updateBossBar();
+        if (teamPoints.get(team) >= ConfigManager.getDeathmatchWinReq()){
+            winGame(team);
+        }
     }
 
     public int getTeamIndex(Team team){
@@ -135,14 +174,26 @@ public class Deathmatch extends Game {
         return (teamList.indexOf(team) + 1);
     }
 
-    public int getScore(Team team){
-        return points.get(team);
+    public int getTeamScore(Team team){
+        return teamPoints.get(team);
+    }
+
+    @Override
+    public void addTeamScore(Team team, int amount) {
+        int currentScore = teamPoints.get(team);
+        int newScore = currentScore + amount;
+        teamPoints.replace(team, newScore);
+    }
+
+    public void updateBossBar(){
+
+        bossBar.setTitle(bossBarText());
     }
 
     public String bossBarText(){
         String bossText = "";
         for (Team team : teamList){
-            bossText = bossText + team.getChatColor().toString() + ChatColor.BOLD + getScore(team) + ChatColor.GRAY.toString() + ChatColor.BOLD + " - ";
+            bossText = bossText + team.getChatColor().toString() + ChatColor.BOLD + getTeamScore(team) + ChatColor.GRAY.toString() + ChatColor.BOLD + " - ";
         }
         bossText = bossText.substring(0, bossText.length() - 3); // Remove last " - "
         return bossText;
@@ -160,7 +211,7 @@ public class Deathmatch extends Game {
         for (int i = 0; i < ConfigManager.getDeathmatchTeam(); i++){
             int num = rnd.nextInt(allTeams.size());
             teamList.add(allTeams.get(num));
-            points.put(allTeams.get(num), 0);
+            teamPoints.put(allTeams.get(num), 0);
             allTeams.remove(num);
         }
     }
@@ -183,13 +234,35 @@ public class Deathmatch extends Game {
         return null;
     }
 
+    @Override
+    public List<Team> getTeams() {
+        return teamList;
+    }
+
     public void removeTeam(Player player){
         if (teams.containsKey(player.getUniqueId())){
             teams.remove(player.getUniqueId());
         }
     }
 
+    public void winGame(Team team){
+        String winMessage = team.getChatColor() + team.name() + " WINS!";
+        for (Player player : Bukkit.getOnlinePlayers()){
+            if (players.contains(player.getUniqueId())){
+                player.getInventory().clear();
+                if (teams.get(player.getUniqueId()) == team){
+                    player.sendTitle(ChatColor.GREEN + "VICTORY!", winMessage, 10, 200, 20);
+                } else {
+                    player.sendTitle(ChatColor.RED + "DEFEAT!", winMessage, 10, 200, 20);
+                }
+            }
+        }
+        setGameState(GameState.VICTORY);
+    }
+
     public void cleanup(){
         bossBar.removeAll();
+        HandlerList.unregisterAll(gunListener);
+
     }
 }

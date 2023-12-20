@@ -1,0 +1,9 @@
+deathmatch:
+  kills-requirement: 100
+  teams: 2
+  required-players: 4
+turfwar:
+  time: 200
+  teams: 2
+  required-players: 4
+moderators: {}
