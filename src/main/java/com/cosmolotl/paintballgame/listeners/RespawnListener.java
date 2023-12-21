@@ -26,6 +26,7 @@ public class RespawnListener implements Listener {
     @EventHandler
     public void onRespawn (PlayerRespawnEvent e) {
         if (paintballGame.getGameManager().getGame() != null){
+            e.getRespawnLocation().setWorld(e.getPlayer().getWorld());
             Bukkit.getScheduler().runTaskLater(paintballGame, new Runnable() {
                 @Override
                 public void run() {

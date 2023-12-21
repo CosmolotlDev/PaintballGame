@@ -10,21 +10,24 @@ import com.cosmolotl.paintballgame.items.BulletMaker;
 import com.cosmolotl.paintballgame.items.GunMaker;
 import com.cosmolotl.paintballgame.games.gamelisteners.GunListener;
 import com.cosmolotl.paintballgame.items.HatMaker;
+import com.cosmolotl.paintballgame.listeners.WaitForWorldLoad;
 import com.cosmolotl.paintballgame.managers.ConfigManager;
 import com.cosmolotl.paintballgame.managers.GameManager;
+import com.cosmolotl.paintballgame.managers.MapManager;
 import com.cosmolotl.paintballgame.tools.MarkerTeleporter;
 import com.google.common.collect.TreeMultimap;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import org.bukkit.*;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
+import java.io.File;
 import java.util.*;
 
 public class Deathmatch extends Game {
@@ -33,14 +36,17 @@ public class Deathmatch extends Game {
     private GameManager gameManager;
     private DeathmatchMap deathmatchMap;
 
+    private World world;
+
     private Random rnd = new Random();
     private GunMaker gunMaker = new GunMaker();
     private BulletMaker bulletMaker = new BulletMaker();
     private HatMaker hatMaker = new HatMaker();
 
     Listener gunListener = new GunListener(this);
-    MarkerTeleporter markerTeleporter = new MarkerTeleporter();
+    Listener waitForWorldLoad = new WaitForWorldLoad(this);
 
+    private HashMap<String, Location> spawns;
 
     private List<UUID> players;
     private List<Team> teamList;
@@ -54,13 +60,41 @@ public class Deathmatch extends Game {
         this.paintballGame = paintballGame;
         this.gameManager = gameManager;
         this.deathmatchMap = deathmatchMap;
+        this.spawns = new HashMap<>();
 
         Bukkit.getPluginManager().registerEvents(gunListener, paintballGame);
+        Bukkit.getPluginManager().registerEvents(waitForWorldLoad, paintballGame);
+
+        world = Bukkit.createWorld(new WorldCreator(deathmatchMap.name().toLowerCase()));
+        world.setAutoSave(false);
+
+
+
+
+
 
         this.teams = new HashMap<>();
         this.teamList = new ArrayList<>();
         this.players = new ArrayList<>();
         this.teamPoints = new HashMap<>();
+    }
+
+    private void setUpSpawns(){
+        FileConfiguration mapConfig = MapManager.mapConfig;
+        String mapName = deathmatchMap.name().toLowerCase();
+        System.out.println(mapName);
+        for (String string : mapConfig.getConfigurationSection("maps." + mapName).getKeys(false)){
+            System.out.println("Start of a loop");
+            spawns.put(string, new Location(
+                    Bukkit.getWorld(mapName),
+                    mapConfig.getDouble("maps." + mapName + "." + string + ".x"),
+                    mapConfig.getDouble("maps." + mapName + "." + string + ".y"),
+                    mapConfig.getDouble("maps." + mapName + "." + string + ".z"),
+                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".yaw"),
+                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".pitch")
+            ));
+            System.out.println(string + " : " + spawns.get(string));
+        }
     }
 
     @Override
@@ -84,11 +118,13 @@ public class Deathmatch extends Game {
 
     @Override
     public void setup() {
+        setUpSpawns();
+
         System.out.println("Ran Setup");
         // Add all online players
         for (Player player : Bukkit.getOnlinePlayers()){
             addPlayer(player);
-
+            player.teleport(spawns.get("spawn"));
         }
 
         createTeams();
@@ -137,7 +173,7 @@ public class Deathmatch extends Game {
             }
 
         // Teleport to Correct Spawn
-            markerTeleporter.teleport(player, Integer.toString(getTeamIndex(getTeam(player))));
+            player.teleport(spawns.get(Integer.toString(getTeamIndex(getTeam(player)))));
             player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 3, 5, true, true));
             player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 100, 3, true, true));
             player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 100, 3, true, true));
@@ -186,6 +222,11 @@ public class Deathmatch extends Game {
         int currentScore = teamPoints.get(team);
         int newScore = currentScore + amount;
         teamPoints.replace(team, newScore);
+    }
+
+    @Override
+    public World getWorld() {
+        return world;
     }
 
     public void updateBossBar(){
@@ -266,6 +307,7 @@ public class Deathmatch extends Game {
     public void cleanup(){
         bossBar.removeAll();
         HandlerList.unregisterAll(gunListener);
-
+        HandlerList.unregisterAll(waitForWorldLoad);
+        Bukkit.unloadWorld(world, false);
     }
 }

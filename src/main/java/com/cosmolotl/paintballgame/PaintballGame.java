@@ -9,6 +9,7 @@ import com.cosmolotl.paintballgame.listeners.EggButtons;
 import com.cosmolotl.paintballgame.listeners.OnJoinListener;
 import com.cosmolotl.paintballgame.managers.ConfigManager;
 import com.cosmolotl.paintballgame.managers.GameManager;
+import com.cosmolotl.paintballgame.managers.MapManager;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -19,6 +20,7 @@ public final class PaintballGame extends JavaPlugin {
     @Override
     public void onEnable() {
         ConfigManager.setUpConfig(this);
+        MapManager.setUpConfig(this);
         System.out.println("Paintball Loaded V2");
 
         Bukkit.getPluginManager().registerEvents(new EggButtons(this), this);

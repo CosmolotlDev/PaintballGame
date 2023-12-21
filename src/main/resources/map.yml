@@ -1,3 +1,9 @@
+lobby:
+  x: 256.5
+  y: 170
+  z: 324.5
+  yaw: -90
+  pitch: 0
 maps:
   test_world:
     spawn:

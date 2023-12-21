@@ -6,6 +6,7 @@ import com.cosmolotl.paintballgame.enums.PlayerSelector;
 import com.cosmolotl.paintballgame.enums.Team;
 import com.cosmolotl.paintballgame.managers.GameManager;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -31,6 +32,10 @@ public abstract class Game {
         this.gameState = gameState;
     }
 
+    public PaintballGame getPaintballGame(){
+        return paintballGame;
+    }
+
     public abstract List<UUID> getPlayers();
     public abstract void spawnPlayer(Player player, Boolean giveKit);
     public abstract void start();
@@ -42,5 +47,6 @@ public abstract class Game {
     public abstract List<Team> getTeams();
     public abstract void addScore(Player player, int amount, PlayerSelector selector);
     public abstract void addTeamScore(Team team, int amount);
+    public abstract World getWorld();
 
 }

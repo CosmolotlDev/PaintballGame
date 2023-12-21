@@ -10,16 +10,18 @@ import com.cosmolotl.paintballgame.instance.Game;
 import com.cosmolotl.paintballgame.items.BulletMaker;
 import com.cosmolotl.paintballgame.items.GunMaker;
 import com.cosmolotl.paintballgame.items.HatMaker;
+import com.cosmolotl.paintballgame.listeners.WaitForWorldLoad;
 import com.cosmolotl.paintballgame.managers.ConfigManager;
 import com.cosmolotl.paintballgame.managers.GameManager;
+import com.cosmolotl.paintballgame.managers.MapManager;
 import com.cosmolotl.paintballgame.timers.Countdown;
 import com.cosmolotl.paintballgame.tools.MarkerTeleporter;
 import com.google.common.collect.TreeMultimap;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import org.bukkit.*;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
@@ -40,8 +42,13 @@ public class TurfWar extends Game {
     private BulletMaker bulletMaker = new BulletMaker();
     private HatMaker hatMaker = new HatMaker();
 
+    private World world;
+
     Listener gunListener = new GunListener(this);
-    MarkerTeleporter markerTeleporter = new MarkerTeleporter();
+    Listener waitForWorldLoad = new WaitForWorldLoad(this);
+
+    private HashMap<String, Location> spawns;
+
     Countdown countdown;
 
     private List<UUID> players;
@@ -57,8 +64,13 @@ public class TurfWar extends Game {
         this.paintballGame = paintballGame;
         this.gameManager = gameManager;
         this.turfWarMap = turfWarMap;
+        this.spawns = new HashMap<>();
 
         Bukkit.getPluginManager().registerEvents(gunListener, paintballGame);
+        Bukkit.getPluginManager().registerEvents(waitForWorldLoad, paintballGame);
+
+        world = Bukkit.createWorld(new WorldCreator(turfWarMap.name().toLowerCase()));
+        world.setAutoSave(false);
 
         countdown = null;
 
@@ -83,7 +95,7 @@ public class TurfWar extends Game {
             }
 
             // Teleport to Correct Spawn
-            markerTeleporter.teleport(player, Integer.toString(getTeamIndex(getTeam(player))));
+            player.teleport(spawns.get(Integer.toString(getTeamIndex(getTeam(player)))));
             player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 100, 5, true, true));
             player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 100, 3, true, true));
             player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 100, 3, true, true));
@@ -107,12 +119,13 @@ public class TurfWar extends Game {
 
     @Override
     public void setup() {
+        setUpSpawns();
 
         System.out.println("Ran Setup");
         // Add all online players
         for (Player player : Bukkit.getOnlinePlayers()){
             addPlayer(player);
-
+            player.teleport(spawns.get("spawn"));
         }
 
         createTeams();
@@ -139,6 +152,24 @@ public class TurfWar extends Game {
         }
 
         this.gameState = GameState.STANDBY;
+    }
+
+    private void setUpSpawns(){
+        FileConfiguration mapConfig = MapManager.mapConfig;
+        String mapName = turfWarMap.name().toLowerCase();
+        System.out.println(mapName);
+        for (String string : mapConfig.getConfigurationSection("maps." + mapName).getKeys(false)){
+            System.out.println("Start of a loop");
+            spawns.put(string, new Location(
+                    Bukkit.getWorld(mapName),
+                    mapConfig.getDouble("maps." + mapName + "." + string + ".x"),
+                    mapConfig.getDouble("maps." + mapName + "." + string + ".y"),
+                    mapConfig.getDouble("maps." + mapName + "." + string + ".z"),
+                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".yaw"),
+                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".pitch")
+            ));
+            System.out.println(string + " : " + spawns.get(string));
+        }
     }
 
     @Override
@@ -173,6 +204,8 @@ public class TurfWar extends Game {
             countdown.end();
         }
         HandlerList.unregisterAll(gunListener);
+        HandlerList.unregisterAll(waitForWorldLoad);
+        Bukkit.unloadWorld(world, false);
     }
 
     @Override
@@ -219,6 +252,11 @@ public class TurfWar extends Game {
         }
         teamPoints.replace(team, newScore);
         updateBossBar();
+    }
+
+    @Override
+    public World getWorld() {
+        return world;
     }
 
     public void addPlayer(Player player){
