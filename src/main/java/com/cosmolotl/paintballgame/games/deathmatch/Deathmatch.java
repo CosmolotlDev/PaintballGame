@@ -68,67 +68,31 @@ public class Deathmatch extends Game {
         world = Bukkit.createWorld(new WorldCreator(deathmatchMap.name().toLowerCase()));
         world.setAutoSave(false);
 
-
-
-
-
-
         this.teams = new HashMap<>();
         this.teamList = new ArrayList<>();
         this.players = new ArrayList<>();
         this.teamPoints = new HashMap<>();
     }
-
-    private void setUpSpawns(){
-        FileConfiguration mapConfig = MapManager.mapConfig;
-        String mapName = deathmatchMap.name().toLowerCase();
-        System.out.println(mapName);
-        for (String string : mapConfig.getConfigurationSection("maps." + mapName).getKeys(false)){
-            System.out.println("Start of a loop");
-            spawns.put(string, new Location(
-                    Bukkit.getWorld(mapName),
-                    mapConfig.getDouble("maps." + mapName + "." + string + ".x"),
-                    mapConfig.getDouble("maps." + mapName + "." + string + ".y"),
-                    mapConfig.getDouble("maps." + mapName + "." + string + ".z"),
-                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".yaw"),
-                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".pitch")
-            ));
-            System.out.println(string + " : " + spawns.get(string));
-        }
-    }
-
-    @Override
-    public List<UUID> getPlayers() {
-        return players;
-    }
-
-
     @Override
     public void start() {
-
         // Teleport players
         for (Player player : Bukkit.getOnlinePlayers()){
             spawnPlayer(player, true);
             player.sendTitle(ChatColor.DARK_PURPLE + "Deathmatch!", ChatColor.BLUE + "First team to " + ConfigManager.getDeathmatchWinReq() + " kills wins!", 10, 100, 10);
         }
-
         setGameState(GameState.LIVE);
-        // Give Players Colored names (Tab, or NameTag)
     }
 
     @Override
     public void setup() {
-        setUpSpawns();
 
-        System.out.println("Ran Setup");
+        setUpSpawns();
         // Add all online players
         for (Player player : Bukkit.getOnlinePlayers()){
             addPlayer(player);
             player.teleport(spawns.get("spawn"));
         }
-
         createTeams();
-
         // Add players to teams
         for (UUID uuid : players){
             TreeMultimap<Integer, Team> count = TreeMultimap.create();
@@ -137,7 +101,6 @@ public class Deathmatch extends Game {
             }
             teams.put(uuid, (Team) count.values().toArray()[0]);
         }
-
         bossBar = Bukkit.createBossBar(
                 bossBarText(),
                 BarColor.BLUE,
@@ -152,12 +115,6 @@ public class Deathmatch extends Game {
 
         setGameState(GameState.STANDBY);
     }
-
-    @Override
-    public void end() {
-
-    }
-
     @Override
     public void rejoin(Player player) {
         spawnPlayer(player, false);
@@ -182,10 +139,87 @@ public class Deathmatch extends Game {
         }
     }
 
-    public void setScore(Team team, int amount){
-        teamPoints.replace(team, amount);
+    public void winGame(Team team){
+        String winMessage = team.getChatColor() + team.name() + " WINS!";
+        for (Player player : Bukkit.getOnlinePlayers()){
+            if (players.contains(player.getUniqueId())){
+                player.getInventory().clear();
+                if (teams.get(player.getUniqueId()) == team){
+                    player.sendTitle(ChatColor.GREEN + "VICTORY!", winMessage, 10, 200, 20);
+                } else {
+                    player.sendTitle(ChatColor.RED + "DEFEAT!", winMessage, 10, 200, 20);
+                }
+            }
+        }
+        setGameState(GameState.VICTORY);
     }
 
+    @Override
+    public void end() {
+
+    }
+
+    public void cleanup(){
+        bossBar.removeAll();
+        HandlerList.unregisterAll(gunListener);
+        HandlerList.unregisterAll(waitForWorldLoad);
+        Bukkit.unloadWorld(world, false);
+    }
+
+    // ==== Get Methods ==== //
+    @Override
+    public World getWorld() {
+        return world;
+    }
+    @Override
+    public List<UUID> getPlayers() {
+        return players;
+    }
+
+    @Override
+    public List<Team> getTeams() {
+        return teamList;
+    }
+
+    public Team getTeam(Player player){
+        if (teams.containsKey(player.getUniqueId())){
+            Team team = teams.get(player.getUniqueId());
+            return team;
+        }
+        return null;
+    }
+
+    public int countTeam(Team team) {
+        int amount = 0;
+        for (Team t : teams.values()){
+            if (t == team){
+                amount ++;
+            }
+        }
+        return amount;
+    }
+    public int getTeamScore(Team team){
+        return teamPoints.get(team);
+    }
+    public int getTeamIndex(Team team){
+        System.out.println("Team Index;" + (teamList.indexOf(team) + 1));
+        return (teamList.indexOf(team) + 1);
+    }
+
+    // ==== Updaters ==== //
+
+    @Override
+    public void addTeamScore(Team team, int amount) {
+        int currentScore = teamPoints.get(team);
+        int newScore = currentScore + amount;
+        teamPoints.replace(team, newScore);
+    }
+
+    public void updateBossBar(){
+        bossBar.setTitle(bossBarText());
+    }
+
+    // ==== Tools ==== //
     public void addScore(Player player, int amount, PlayerSelector selector){
         Team team = getTeam(player);
         int teamScore = teamPoints.get(team);
@@ -207,46 +241,9 @@ public class Deathmatch extends Game {
             winGame(team);
         }
     }
-
-    public int getTeamIndex(Team team){
-        System.out.println("Team Index;" + (teamList.indexOf(team) + 1));
-        return (teamList.indexOf(team) + 1);
-    }
-
-    public int getTeamScore(Team team){
-        return teamPoints.get(team);
-    }
-
-    @Override
-    public void addTeamScore(Team team, int amount) {
-        int currentScore = teamPoints.get(team);
-        int newScore = currentScore + amount;
-        teamPoints.replace(team, newScore);
-    }
-
-    @Override
-    public World getWorld() {
-        return world;
-    }
-
-    public void updateBossBar(){
-
-        bossBar.setTitle(bossBarText());
-    }
-
-    public String bossBarText(){
-        String bossText = "";
-        for (Team team : teamList){
-            bossText = bossText + team.getChatColor().toString() + ChatColor.BOLD + getTeamScore(team) + ChatColor.GRAY.toString() + ChatColor.BOLD + " - ";
-        }
-        bossText = bossText.substring(0, bossText.length() - 3); // Remove last " - "
-        return bossText;
-    }
-
     public void addPlayer(Player player){
         players.add(player.getUniqueId());
     }
-
     public void createTeams(){
         List<Team> allTeams = new ArrayList<>();
         for (Team team : Team.values()){
@@ -260,54 +257,31 @@ public class Deathmatch extends Game {
         }
     }
 
-    public int countTeam(Team team) {
-        int amount = 0;
-        for (Team t : teams.values()){
-            if (t == team){
-                amount ++;
-            }
+    public String bossBarText(){
+        String bossText = "";
+        for (Team team : teamList){
+            bossText = bossText + team.getChatColor().toString() + ChatColor.BOLD + getTeamScore(team) + ChatColor.GRAY.toString() + ChatColor.BOLD + " - ";
         }
-        return amount;
+        bossText = bossText.substring(0, bossText.length() - 3); // Remove last " - "
+        return bossText;
     }
 
-    public Team getTeam(Player player){
-        if (teams.containsKey(player.getUniqueId())){
-            Team team = teams.get(player.getUniqueId());
-            return team;
-        }
-        return null;
-    }
-
-    @Override
-    public List<Team> getTeams() {
-        return teamList;
-    }
-
-    public void removeTeam(Player player){
-        if (teams.containsKey(player.getUniqueId())){
-            teams.remove(player.getUniqueId());
+    private void setUpSpawns(){
+        FileConfiguration mapConfig = MapManager.mapConfig;
+        String mapName = deathmatchMap.name().toLowerCase();
+        System.out.println(mapName);
+        for (String string : mapConfig.getConfigurationSection("maps." + mapName).getKeys(false)){
+            System.out.println("Start of a loop");
+            spawns.put(string, new Location(
+                    Bukkit.getWorld(mapName),
+                    mapConfig.getDouble("maps." + mapName + "." + string + ".x"),
+                    mapConfig.getDouble("maps." + mapName + "." + string + ".y"),
+                    mapConfig.getDouble("maps." + mapName + "." + string + ".z"),
+                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".yaw"),
+                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".pitch")
+            ));
+            System.out.println(string + " : " + spawns.get(string));
         }
     }
 
-    public void winGame(Team team){
-        String winMessage = team.getChatColor() + team.name() + " WINS!";
-        for (Player player : Bukkit.getOnlinePlayers()){
-            if (players.contains(player.getUniqueId())){
-                player.getInventory().clear();
-                if (teams.get(player.getUniqueId()) == team){
-                    player.sendTitle(ChatColor.GREEN + "VICTORY!", winMessage, 10, 200, 20);
-                } else {
-                    player.sendTitle(ChatColor.RED + "DEFEAT!", winMessage, 10, 200, 20);
-                }
-            }
-        }
-        setGameState(GameState.VICTORY);
-    }
-
-    public void cleanup(){
-        bossBar.removeAll();
-        HandlerList.unregisterAll(gunListener);
-        HandlerList.unregisterAll(waitForWorldLoad);
-        Bukkit.unloadWorld(world, false);
-    }
 }

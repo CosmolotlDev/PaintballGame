@@ -36,17 +36,20 @@ public abstract class Game {
         return paintballGame;
     }
 
-    public abstract List<UUID> getPlayers();
     public abstract void spawnPlayer(Player player, Boolean giveKit);
     public abstract void start();
     public abstract void setup();
     public abstract void end();
     public abstract void rejoin(Player player);
     public abstract void cleanup();
+
+    // ==== Getters ==== //
+    public abstract World getWorld();
     public abstract Team getTeam(Player player);
+    public abstract List<UUID> getPlayers();
     public abstract List<Team> getTeams();
+
+    // ==== Updaters ==== //
     public abstract void addScore(Player player, int amount, PlayerSelector selector);
     public abstract void addTeamScore(Team team, int amount);
-    public abstract World getWorld();
-
 }

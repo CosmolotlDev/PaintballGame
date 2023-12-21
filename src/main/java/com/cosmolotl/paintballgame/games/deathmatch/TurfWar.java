@@ -81,30 +81,6 @@ public class TurfWar extends Game {
     }
 
     @Override
-    public List<UUID> getPlayers() {
-        return players;
-    }
-
-    @Override
-    public void spawnPlayer(Player player, Boolean giveKit) {
-        if (teams.keySet().contains(player.getUniqueId())){
-            // Give Items
-            if (giveKit){
-                player.getInventory().addItem(gunMaker.makeBasicGun(teams.get(player.getUniqueId())));
-                player.getInventory().setHelmet(hatMaker.MakeHat(getTeam(player), true));
-            }
-
-            // Teleport to Correct Spawn
-            player.teleport(spawns.get(Integer.toString(getTeamIndex(getTeam(player)))));
-            player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 100, 5, true, true));
-            player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 100, 3, true, true));
-            player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 100, 3, true, true));
-        } else {
-            gameManager.onJoin(player);
-        }
-    }
-
-    @Override
     public void start() {
         // Teleport players
         for (Player player : Bukkit.getOnlinePlayers()){
@@ -119,15 +95,14 @@ public class TurfWar extends Game {
 
     @Override
     public void setup() {
+        
         setUpSpawns();
-
         System.out.println("Ran Setup");
         // Add all online players
         for (Player player : Bukkit.getOnlinePlayers()){
             addPlayer(player);
             player.teleport(spawns.get("spawn"));
         }
-
         createTeams();
 
         // Add players to teams
@@ -154,22 +129,42 @@ public class TurfWar extends Game {
         this.gameState = GameState.STANDBY;
     }
 
-    private void setUpSpawns(){
-        FileConfiguration mapConfig = MapManager.mapConfig;
-        String mapName = turfWarMap.name().toLowerCase();
-        System.out.println(mapName);
-        for (String string : mapConfig.getConfigurationSection("maps." + mapName).getKeys(false)){
-            System.out.println("Start of a loop");
-            spawns.put(string, new Location(
-                    Bukkit.getWorld(mapName),
-                    mapConfig.getDouble("maps." + mapName + "." + string + ".x"),
-                    mapConfig.getDouble("maps." + mapName + "." + string + ".y"),
-                    mapConfig.getDouble("maps." + mapName + "." + string + ".z"),
-                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".yaw"),
-                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".pitch")
-            ));
-            System.out.println(string + " : " + spawns.get(string));
+    @Override
+    public void spawnPlayer(Player player, Boolean giveKit) {
+        if (teams.keySet().contains(player.getUniqueId())){
+            // Give Items
+            if (giveKit){
+                player.getInventory().addItem(gunMaker.makeBasicGun(teams.get(player.getUniqueId())));
+                player.getInventory().setHelmet(hatMaker.MakeHat(getTeam(player), true));
+            }
+
+            // Teleport to Correct Spawn
+            player.teleport(spawns.get(Integer.toString(getTeamIndex(getTeam(player)))));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 100, 5, true, true));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 100, 3, true, true));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 100, 3, true, true));
+        } else {
+            gameManager.onJoin(player);
         }
+    }
+    @Override
+    public void rejoin(Player player) {
+        spawnPlayer(player, false);
+    }
+
+    public void winGame(Team team){
+        String winMessage = team.getChatColor() + team.name() + " WINS!";
+        for (Player player : Bukkit.getOnlinePlayers()){
+            if (players.contains(player.getUniqueId())){
+                player.getInventory().clear();
+                if (teams.get(player.getUniqueId()) == team){
+                    player.sendTitle(ChatColor.GREEN + "VICTORY!", winMessage, 10, 200, 20);
+                } else {
+                    player.sendTitle(ChatColor.RED + "DEFEAT!", winMessage, 10, 200, 20);
+                }
+            }
+        }
+        gameState = GameState.VICTORY;
     }
 
     @Override
@@ -186,16 +181,6 @@ public class TurfWar extends Game {
     }
 
     @Override
-    public void rejoin(Player player) {
-        spawnPlayer(player, false);
-    }
-
-    @Override
-    public GameState getGameState() {
-        return gameState;
-    }
-
-    @Override
     public void cleanup() {
         bossBar.removeAll();
         System.out.println("Cleanup");
@@ -208,6 +193,16 @@ public class TurfWar extends Game {
         Bukkit.unloadWorld(world, false);
     }
 
+    // ==== Getters ==== //
+
+    @Override
+    public World getWorld() {
+        return world;
+    }
+    @Override
+    public List<UUID> getPlayers() {
+        return players;
+    }
     @Override
     public Team getTeam(Player player){
         if (teams.containsKey(player.getUniqueId())){
@@ -216,11 +211,45 @@ public class TurfWar extends Game {
         }
         return null;
     }
-
     @Override
     public List<Team> getTeams() {
         return teamList;
     }
+    public int getTeamScore(Team team){
+        return teamPoints.get(team);
+    }
+    public int getTeamIndex(Team team){
+        System.out.println("Team Index;" + (teamList.indexOf(team) + 1));
+        return (teamList.indexOf(team) + 1);
+    }
+    public int countTeam(Team team) {
+        int amount = 0;
+        for (Team t : teams.values()){
+            if (t == team){
+                amount ++;
+            }
+        }
+        return amount;
+    }
+
+    // ==== Updater ==== //
+    @Override
+    public void addTeamScore(Team team, int amount) {
+        System.out.println("Added Score: " + team.name() + amount);
+        int currentScore = teamPoints.get(team);
+        int newScore = currentScore + amount;
+        if (newScore <= 0){
+            newScore = 0;
+        }
+        teamPoints.replace(team, newScore);
+        updateBossBar();
+    }
+
+    public void updateBossBar(){
+        bossBar.setTitle(bossBarText());
+    }
+
+    // ==== Tools ==== //
 
     @Override
     public void addScore(Player player, int amount, PlayerSelector selector){
@@ -241,28 +270,6 @@ public class TurfWar extends Game {
         teamPoints.replace(team, teamScore);
         updateBossBar();
     }
-
-    @Override
-    public void addTeamScore(Team team, int amount) {
-        System.out.println("Added Score: " + team.name() + amount);
-        int currentScore = teamPoints.get(team);
-        int newScore = currentScore + amount;
-        if (newScore <= 0){
-            newScore = 0;
-        }
-        teamPoints.replace(team, newScore);
-        updateBossBar();
-    }
-
-    @Override
-    public World getWorld() {
-        return world;
-    }
-
-    public void addPlayer(Player player){
-        players.add(player.getUniqueId());
-    }
-
     public void createTeams(){
         List<Team> allTeams = new ArrayList<>();
         for (Team team : Team.values()){
@@ -275,30 +282,9 @@ public class TurfWar extends Game {
             allTeams.remove(num);
         }
     }
-
-    public int getTeamIndex(Team team){
-        System.out.println("Team Index;" + (teamList.indexOf(team) + 1));
-        return (teamList.indexOf(team) + 1);
+    public void addPlayer(Player player){
+        players.add(player.getUniqueId());
     }
-
-    public int getTeamScore(Team team){
-        return teamPoints.get(team);
-    }
-
-    public int countTeam(Team team) {
-        int amount = 0;
-        for (Team t : teams.values()){
-            if (t == team){
-                amount ++;
-            }
-        }
-        return amount;
-    }
-
-    public void updateBossBar(){
-        bossBar.setTitle(bossBarText());
-    }
-
 
     public String bossBarText(){
         String bossText = "";
@@ -308,19 +294,21 @@ public class TurfWar extends Game {
         bossText = bossText.substring(0, bossText.length() - 3); // Remove last " - "
         return bossText;
     }
-
-    public void winGame(Team team){
-        String winMessage = team.getChatColor() + team.name() + " WINS!";
-        for (Player player : Bukkit.getOnlinePlayers()){
-            if (players.contains(player.getUniqueId())){
-                player.getInventory().clear();
-                if (teams.get(player.getUniqueId()) == team){
-                    player.sendTitle(ChatColor.GREEN + "VICTORY!", winMessage, 10, 200, 20);
-                } else {
-                    player.sendTitle(ChatColor.RED + "DEFEAT!", winMessage, 10, 200, 20);
-                }
-            }
+    private void setUpSpawns(){
+        FileConfiguration mapConfig = MapManager.mapConfig;
+        String mapName = turfWarMap.name().toLowerCase();
+        System.out.println(mapName);
+        for (String string : mapConfig.getConfigurationSection("maps." + mapName).getKeys(false)){
+            System.out.println("Start of a loop");
+            spawns.put(string, new Location(
+                    Bukkit.getWorld(mapName),
+                    mapConfig.getDouble("maps." + mapName + "." + string + ".x"),
+                    mapConfig.getDouble("maps." + mapName + "." + string + ".y"),
+                    mapConfig.getDouble("maps." + mapName + "." + string + ".z"),
+                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".yaw"),
+                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".pitch")
+            ));
+            System.out.println(string + " : " + spawns.get(string));
         }
-        gameState = GameState.VICTORY;
     }
 }
