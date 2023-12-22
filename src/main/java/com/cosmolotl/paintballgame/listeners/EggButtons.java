@@ -4,7 +4,6 @@ import com.cosmolotl.paintballgame.PaintballGame;
 import com.cosmolotl.paintballgame.enums.Gamemode;
 import com.cosmolotl.paintballgame.enums.maps.DeathmatchMap;
 import com.cosmolotl.paintballgame.enums.maps.TurfWarMap;
-import com.cosmolotl.paintballgame.games.deathmatch.Deathmatch;
 import com.cosmolotl.paintballgame.items.MarkerEggsMaker;
 import com.cosmolotl.paintballgame.managers.GameManager;
 import org.bukkit.Material;
@@ -79,19 +78,13 @@ public class EggButtons implements Listener {
                         mainMenu(player);
                         break;
 
-                    // Marker Makers
+                    // Map Select
                     default:
                         if (item.getType().equals(Material.PARROT_SPAWN_EGG)){
                             player.getInventory().clear();
                             createGame(item);
                             startStopGame(player);
                         }
-
-                        /*
-                        Marker locationMarker = (Marker) player.getWorld().spawnEntity(player.getLocation(), EntityType.MARKER);
-                        locationMarker.setCustomName(player.getInventory().getItemInMainHand().getItemMeta().getDisplayName());
-                        System.out.println(player.getInventory().getItemInMainHand().getItemMeta().getDisplayName());
-                         */
                 }
             }
         }

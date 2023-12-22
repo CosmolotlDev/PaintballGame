@@ -2,10 +2,12 @@ package com.cosmolotl.paintballgame.games.deathmatch;
 
 import com.cosmolotl.paintballgame.PaintballGame;
 import com.cosmolotl.paintballgame.enums.GameState;
+import com.cosmolotl.paintballgame.enums.GunType;
 import com.cosmolotl.paintballgame.enums.PlayerSelector;
 import com.cosmolotl.paintballgame.enums.Team;
 import com.cosmolotl.paintballgame.enums.maps.TurfWarMap;
 import com.cosmolotl.paintballgame.games.gamelisteners.GunListener;
+import com.cosmolotl.paintballgame.guns.ClassicGun;
 import com.cosmolotl.paintballgame.instance.Game;
 import com.cosmolotl.paintballgame.items.BulletMaker;
 import com.cosmolotl.paintballgame.items.GunMaker;
@@ -15,7 +17,6 @@ import com.cosmolotl.paintballgame.managers.ConfigManager;
 import com.cosmolotl.paintballgame.managers.GameManager;
 import com.cosmolotl.paintballgame.managers.MapManager;
 import com.cosmolotl.paintballgame.timers.Countdown;
-import com.cosmolotl.paintballgame.tools.MarkerTeleporter;
 import com.google.common.collect.TreeMultimap;
 import org.bukkit.*;
 import org.bukkit.boss.BarColor;
@@ -27,7 +28,6 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.checkerframework.checker.units.qual.C;
 
 import java.util.*;
 
@@ -88,14 +88,14 @@ public class TurfWar extends Game {
             player.sendTitle(ChatColor.GREEN + "Turf War!", ChatColor.YELLOW + "Claim the most land to win!", 10 , 100, 10);
         }
 
-        gameState = GameState.LIVE;
+        setGameState(GameState.LIVE);
         countdown = new Countdown(paintballGame, this);
         // Give Players Colored names (Tab, or NameTag)
     }
 
     @Override
     public void setup() {
-        
+
         setUpSpawns();
         System.out.println("Ran Setup");
         // Add all online players
@@ -126,7 +126,7 @@ public class TurfWar extends Game {
             }
         }
 
-        this.gameState = GameState.STANDBY;
+        setGameState(GameState.STANDBY);
     }
 
     @Override
@@ -134,7 +134,8 @@ public class TurfWar extends Game {
         if (teams.keySet().contains(player.getUniqueId())){
             // Give Items
             if (giveKit){
-                player.getInventory().addItem(gunMaker.makeBasicGun(teams.get(player.getUniqueId())));
+                player.getInventory().addItem(gunMaker.makeBasicGun(teams.get(player.getUniqueId()), GunType.CLASSIC_GUN));
+                player.getInventory().addItem(gunMaker.makeBasicGun(teams.get(player.getUniqueId()), GunType.SUB_MACHINE_GUN));
                 player.getInventory().setHelmet(hatMaker.MakeHat(getTeam(player), true));
             }
 
@@ -164,7 +165,7 @@ public class TurfWar extends Game {
                 }
             }
         }
-        gameState = GameState.VICTORY;
+        setGameState(GameState.VICTORY);
     }
 
     @Override

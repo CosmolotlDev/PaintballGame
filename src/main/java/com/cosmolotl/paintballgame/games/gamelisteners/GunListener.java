@@ -1,14 +1,16 @@
 package com.cosmolotl.paintballgame.games.gamelisteners;
 
-import com.cosmolotl.paintballgame.PaintballGame;
 import com.cosmolotl.paintballgame.enums.GameState;
+import com.cosmolotl.paintballgame.enums.GunType;
 import com.cosmolotl.paintballgame.enums.PlayerSelector;
 import com.cosmolotl.paintballgame.enums.Team;
 import com.cosmolotl.paintballgame.games.deathmatch.Deathmatch;
 import com.cosmolotl.paintballgame.games.deathmatch.TurfWar;
+import com.cosmolotl.paintballgame.guns.ClassicGun;
+import com.cosmolotl.paintballgame.guns.Gun;
+import com.cosmolotl.paintballgame.guns.SubMachineGun;
 import com.cosmolotl.paintballgame.instance.Game;
 import com.cosmolotl.paintballgame.items.BulletMaker;
-import com.sun.tools.javac.jvm.Items;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.*;
@@ -21,12 +23,10 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.projectiles.ProjectileSource;
-import org.bukkit.util.Vector;
-import org.checkerframework.checker.units.qual.A;
 
 import java.util.*;
 
@@ -37,8 +37,7 @@ public class GunListener implements Listener {
     public GunListener (Game game){
         this.game = game;
     }
-    private final Map<UUID, Long> cooldowns = new HashMap<>();
-    private final long cooldownDuration = 100;
+    private Map<UUID, Long> coolDowns = new HashMap<>();
 
     BulletMaker bulletMaker = new BulletMaker();
 
@@ -46,12 +45,26 @@ public class GunListener implements Listener {
     public void shootGun(PlayerInteractEvent e) {
 
         Player player = e.getPlayer();
-        if (cooldowns.containsKey(player.getUniqueId())) {
-            long lastTime = cooldowns.get(player.getUniqueId());
-            long currentTime = System.currentTimeMillis();
-            long timeDifference = currentTime - lastTime;
+        ItemStack item = player.getInventory().getItemInMainHand();
+        GunType gunType = null;
+        // If item is leather horse armour with custom model data
+        if (item.getType().equals(Material.LEATHER_HORSE_ARMOR) && item.getItemMeta().hasCustomModelData()){
+            for (GunType type : GunType.values()){
+                if (type.getCustomModel() == item.getItemMeta().getCustomModelData()){
+                    gunType = type;
+                    break;
+                }
+            }
+            player.setNoActionTicks(1);
+            System.out.println(player.getNoActionTicks());
+        }
 
-            if (timeDifference < cooldownDuration){
+        if (coolDowns.containsKey(player.getUniqueId())) {
+            long minTime = coolDowns.get(player.getUniqueId()); // Min time till player can shoot
+
+            System.out.println("1 Min Time: " + minTime);
+            System.out.println("2 System Time: " + System.currentTimeMillis());
+            if (System.currentTimeMillis() < minTime){
                 e.setCancelled(true);
                 return;
             }
@@ -60,7 +73,19 @@ public class GunListener implements Listener {
         System.out.println("Interact");
         System.out.println(e.getAction().toString());
         System.out.println(e.getHand());
+        // If game is live && Correct hand
+        if (e.getHand().equals(EquipmentSlot.HAND) &&
+                game.getGameState() == GameState.LIVE &&
+                (e.getAction().equals(Action.RIGHT_CLICK_AIR) || e.getAction().equals(Action.RIGHT_CLICK_BLOCK))) {
+            if (gunType != null){
+                Team playersTeam = game.getTeam(player);
+                if (playersTeam != null) {
+                    shoot(player, playersTeam, gunType);
+                }
+            }
+        }
 
+        /*
         ItemStack item = player.getInventory().getItemInMainHand();
         // Check for Correct hand & is game live
         if (e.getHand().equals(EquipmentSlot.HAND) &&
@@ -80,18 +105,44 @@ public class GunListener implements Listener {
                 } else {
                     player.sendMessage(ChatColor.RED + "Error: Gunlistener.Shootgun, No color team");
                 }
-                cooldowns.put(player.getUniqueId(), System.currentTimeMillis());
+                setCoolDown(player.getUniqueId(), 100L);
             }
         }
+
+         */
+    }
+
+    public void shoot(Player player, Team playerTeam, GunType gunType){
+        Gun gun;
+        switch (gunType){
+            case SUB_MACHINE_GUN:
+                gun = new SubMachineGun(game.getPaintballGame());
+                break;
+            case CLASSIC_GUN:
+                gun = new ClassicGun(game.getPaintballGame());
+                break;
+            default:
+                gun = new ClassicGun(game.getPaintballGame());
+                break;
+        }
+        gun.startShoot(player, playerTeam);
+        setCoolDown(player.getUniqueId(), gunType.getCoolDown());
+    }
+
+    public void setCoolDown(UUID player, Long coolDown){
+        Long coolDownCalc = System.currentTimeMillis() + coolDown;
+        coolDowns.put(player, coolDownCalc);
     }
 
     @EventHandler
     public void onHit (ProjectileHitEvent e){
+        System.out.println("Function Start");
         Projectile projectile = e.getEntity();
         ProjectileSource sender = projectile.getShooter();
         Entity hitEntity = e.getHitEntity();
         if (sender instanceof Player && projectile instanceof Snowball && hitEntity instanceof LivingEntity){
             Snowball snowball = (Snowball) projectile;
+            ItemMeta snowballMeta = snowball.getItem().getItemMeta();
             Player player = (Player) sender;
             LivingEntity receiver = (LivingEntity) hitEntity;
             if (hitEntity instanceof Player){
@@ -101,8 +152,17 @@ public class GunListener implements Listener {
                     return;
                 }
             }
-            if (snowball.getItem().getItemMeta().hasCustomModelData() && hasPotionEffect(player, PotionEffectType.DAMAGE_RESISTANCE, 5)){ // Is it a paintball? (Snowball with customModelData)
-                receiver.damage(9, player);
+            System.out.println("Good Hit!");
+            if (snowballMeta.hasCustomModelData() && !hasPotionEffect(receiver, PotionEffectType.DAMAGE_RESISTANCE, 5)) { // Is it a paintball? (Snowball with customModelData)
+                System.out.println("Deal Damage");
+                try {
+                    receiver.damage(Integer.valueOf(snowballMeta.getLocalizedName()), player);
+                    System.out.println("Damage: " + Integer.valueOf(snowballMeta.getLocalizedName()));
+                } catch (NumberFormatException error) {
+                    error.printStackTrace();
+                    System.out.println("Damage: 1");
+                    receiver.damage(1);
+                }
                 receiver.setNoDamageTicks(0);
                 player.playSound(player, Sound.ENTITY_ARROW_HIT_PLAYER, 1, 1);
             }
@@ -132,9 +192,6 @@ public class GunListener implements Listener {
                     }
                 }
                 block.setType(game.getTeam(player).getBlock());
-                // Check if it is Same team
-                // else if its another teams subract and add
-                // if its other, than add
             }
         }
     }
@@ -147,6 +204,7 @@ public class GunListener implements Listener {
             System.out.println("Killer was a player");
             Player player = e.getEntity().getKiller();
             game.addScore(player, 1, PlayerSelector.TEAM);
+            player.getInventory().addItem(new ItemStack(Material.EMERALD, 3));
         }
     }
 
@@ -196,8 +254,8 @@ public class GunListener implements Listener {
         return allTeam;
     }
 
-    private boolean hasPotionEffect(Player player, PotionEffectType effectType, int amplifier){
-        PotionEffect effect = player.getPotionEffect(effectType);
+    private boolean hasPotionEffect(LivingEntity hitEntity, PotionEffectType effectType, int amplifier){
+        PotionEffect effect = hitEntity.getPotionEffect(effectType);
 
         return effect != null && effect.getAmplifier() == amplifier;
     }

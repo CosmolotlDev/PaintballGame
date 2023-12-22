@@ -2,6 +2,7 @@ package com.cosmolotl.paintballgame.games.deathmatch;
 
 import com.cosmolotl.paintballgame.PaintballGame;
 import com.cosmolotl.paintballgame.enums.GameState;
+import com.cosmolotl.paintballgame.enums.GunType;
 import com.cosmolotl.paintballgame.enums.PlayerSelector;
 import com.cosmolotl.paintballgame.enums.Team;
 import com.cosmolotl.paintballgame.enums.maps.DeathmatchMap;
@@ -125,7 +126,7 @@ public class Deathmatch extends Game {
         if (teams.keySet().contains(player.getUniqueId())){
         // Give Items
             if (giveKit){
-                player.getInventory().addItem(gunMaker.makeBasicGun(teams.get(player.getUniqueId())));
+                player.getInventory().addItem(gunMaker.makeBasicGun(teams.get(player.getUniqueId()), GunType.CLASSIC_GUN));
                 player.getInventory().setHelmet(hatMaker.MakeHat(getTeam(player), true));
             }
 

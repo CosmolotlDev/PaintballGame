@@ -4,6 +4,7 @@ import com.cosmolotl.paintballgame.commands.EndCommand;
 import com.cosmolotl.paintballgame.commands.JoinCommand;
 import com.cosmolotl.paintballgame.commands.SetupCommand;
 import com.cosmolotl.paintballgame.commands.StartCommand;
+import com.cosmolotl.paintballgame.guns.Gun;
 import com.cosmolotl.paintballgame.listeners.RespawnListener;
 import com.cosmolotl.paintballgame.listeners.EggButtons;
 import com.cosmolotl.paintballgame.listeners.OnJoinListener;
@@ -37,7 +38,6 @@ public final class PaintballGame extends JavaPlugin {
 
     @Override
     public void onDisable(){
-
         gameManager.deleteGame();
     }
     public GameManager getGameManager() {
