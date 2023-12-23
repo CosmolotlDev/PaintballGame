@@ -6,9 +6,7 @@ import com.cosmolotl.paintballgame.enums.PlayerSelector;
 import com.cosmolotl.paintballgame.enums.Team;
 import com.cosmolotl.paintballgame.games.deathmatch.Deathmatch;
 import com.cosmolotl.paintballgame.games.deathmatch.TurfWar;
-import com.cosmolotl.paintballgame.guns.ClassicGun;
-import com.cosmolotl.paintballgame.guns.Gun;
-import com.cosmolotl.paintballgame.guns.SubMachineGun;
+import com.cosmolotl.paintballgame.guns.*;
 import com.cosmolotl.paintballgame.instance.Game;
 import com.cosmolotl.paintballgame.items.BulletMaker;
 import org.bukkit.*;
@@ -62,17 +60,12 @@ public class GunListener implements Listener {
         if (coolDowns.containsKey(player.getUniqueId())) {
             long minTime = coolDowns.get(player.getUniqueId()); // Min time till player can shoot
 
-            System.out.println("1 Min Time: " + minTime);
-            System.out.println("2 System Time: " + System.currentTimeMillis());
             if (System.currentTimeMillis() < minTime){
                 e.setCancelled(true);
                 return;
             }
         }
 
-        System.out.println("Interact");
-        System.out.println(e.getAction().toString());
-        System.out.println(e.getHand());
         // If game is live && Correct hand
         if (e.getHand().equals(EquipmentSlot.HAND) &&
                 game.getGameState() == GameState.LIVE &&
@@ -121,6 +114,12 @@ public class GunListener implements Listener {
             case CLASSIC_GUN:
                 gun = new ClassicGun(game.getPaintballGame());
                 break;
+            case SHOTGUN:
+                gun = new ShotGun(game.getPaintballGame());
+                break;
+            case SNIPER_GUN:
+                gun = new SniperGun(game.getPaintballGame());
+                break;
             default:
                 gun = new ClassicGun(game.getPaintballGame());
                 break;
@@ -136,7 +135,6 @@ public class GunListener implements Listener {
 
     @EventHandler
     public void onHit (ProjectileHitEvent e){
-        System.out.println("Function Start");
         Projectile projectile = e.getEntity();
         ProjectileSource sender = projectile.getShooter();
         Entity hitEntity = e.getHitEntity();
@@ -152,15 +150,11 @@ public class GunListener implements Listener {
                     return;
                 }
             }
-            System.out.println("Good Hit!");
             if (snowballMeta.hasCustomModelData() && !hasPotionEffect(receiver, PotionEffectType.DAMAGE_RESISTANCE, 5)) { // Is it a paintball? (Snowball with customModelData)
-                System.out.println("Deal Damage");
                 try {
                     receiver.damage(Integer.valueOf(snowballMeta.getLocalizedName()), player);
-                    System.out.println("Damage: " + Integer.valueOf(snowballMeta.getLocalizedName()));
                 } catch (NumberFormatException error) {
                     error.printStackTrace();
-                    System.out.println("Damage: 1");
                     receiver.damage(1);
                 }
                 receiver.setNoDamageTicks(0);
@@ -198,10 +192,8 @@ public class GunListener implements Listener {
 
     @EventHandler
     public void onKill (EntityDeathEvent e){
-        System.out.println("Entity Died");
         LivingEntity killedEntity = e.getEntity();
         if (game instanceof Deathmatch && killedEntity.getKiller() instanceof Player && killedEntity instanceof Player){
-            System.out.println("Killer was a player");
             Player player = e.getEntity().getKiller();
             game.addScore(player, 1, PlayerSelector.TEAM);
             player.getInventory().addItem(new ItemStack(Material.EMERALD, 3));

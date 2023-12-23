@@ -1,21 +1,18 @@
 package com.cosmolotl.paintballgame.games.deathmatch;
 
 import com.cosmolotl.paintballgame.PaintballGame;
-import com.cosmolotl.paintballgame.enums.GameState;
-import com.cosmolotl.paintballgame.enums.GunType;
-import com.cosmolotl.paintballgame.enums.PlayerSelector;
-import com.cosmolotl.paintballgame.enums.Team;
+import com.cosmolotl.paintballgame.enums.*;
 import com.cosmolotl.paintballgame.enums.maps.DeathmatchMap;
 import com.cosmolotl.paintballgame.instance.Game;
 import com.cosmolotl.paintballgame.items.BulletMaker;
 import com.cosmolotl.paintballgame.items.GunMaker;
 import com.cosmolotl.paintballgame.games.gamelisteners.GunListener;
 import com.cosmolotl.paintballgame.items.HatMaker;
+import com.cosmolotl.paintballgame.items.VillagerMaker;
 import com.cosmolotl.paintballgame.listeners.WaitForWorldLoad;
 import com.cosmolotl.paintballgame.managers.ConfigManager;
 import com.cosmolotl.paintballgame.managers.GameManager;
 import com.cosmolotl.paintballgame.managers.MapManager;
-import com.cosmolotl.paintballgame.tools.MarkerTeleporter;
 import com.google.common.collect.TreeMultimap;
 import org.bukkit.*;
 import org.bukkit.boss.BarColor;
@@ -28,7 +25,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import java.io.File;
 import java.util.*;
 
 public class Deathmatch extends Game {
@@ -43,6 +39,7 @@ public class Deathmatch extends Game {
     private GunMaker gunMaker = new GunMaker();
     private BulletMaker bulletMaker = new BulletMaker();
     private HatMaker hatMaker = new HatMaker();
+    private VillagerMaker villagerMaker = new VillagerMaker();
 
     Listener gunListener = new GunListener(this);
     Listener waitForWorldLoad = new WaitForWorldLoad(this);
@@ -102,6 +99,8 @@ public class Deathmatch extends Game {
             }
             teams.put(uuid, (Team) count.values().toArray()[0]);
         }
+        spawnStores();
+
         bossBar = Bukkit.createBossBar(
                 bossBarText(),
                 BarColor.BLUE,
@@ -116,6 +115,33 @@ public class Deathmatch extends Game {
 
         setGameState(GameState.STANDBY);
     }
+
+    public void spawnStores(){
+        FileConfiguration mapConfig = MapManager.mapConfig;
+        String mapName = deathmatchMap.name().toLowerCase();
+        System.out.println(mapName);
+        for (String string : mapConfig.getConfigurationSection("maps." + mapName + ".stores").getKeys(false)){
+            for (String store : mapConfig.getConfigurationSection("maps." + mapName + ".stores." + string).getKeys(false)){
+                System.out.println("Start of a loop");
+                Location location = (new Location(
+                        Bukkit.getWorld(mapName),
+                        mapConfig.getDouble("maps." + mapName + ".stores." + string + "." + store + ".x"),
+                        mapConfig.getDouble("maps." + mapName + ".stores." + string + "." + store + ".y"),
+                        mapConfig.getDouble("maps." + mapName + ".stores." + string + "." + store + ".z"),
+                        (float) mapConfig.getDouble("maps." + mapName + ".stores." + string + "." + store + ".yaw"),
+                        (float) mapConfig.getDouble("maps." + mapName + ".stores." + string + "." + store + ".pitch")
+                ));
+                if (Integer.valueOf(string) <= teamList.size())
+                switch (store){
+                    case "Weapon":
+                        villagerMaker.spawnCustomVillager(location, teamList.get(Integer.valueOf(string) - 1), VillagerStoreType.WEAPONS);
+                }
+
+            }
+            System.out.println(string + " : " + spawns.get(string));
+        }
+    }
+
     @Override
     public void rejoin(Player player) {
         spawnPlayer(player, false);
@@ -126,7 +152,7 @@ public class Deathmatch extends Game {
         if (teams.keySet().contains(player.getUniqueId())){
         // Give Items
             if (giveKit){
-                player.getInventory().addItem(gunMaker.makeBasicGun(teams.get(player.getUniqueId()), GunType.CLASSIC_GUN));
+                player.getInventory().addItem(gunMaker.makeGun(teams.get(player.getUniqueId()), GunType.CLASSIC_GUN));
                 player.getInventory().setHelmet(hatMaker.MakeHat(getTeam(player), true));
             }
 
@@ -271,15 +297,15 @@ public class Deathmatch extends Game {
         FileConfiguration mapConfig = MapManager.mapConfig;
         String mapName = deathmatchMap.name().toLowerCase();
         System.out.println(mapName);
-        for (String string : mapConfig.getConfigurationSection("maps." + mapName).getKeys(false)){
+        for (String string : mapConfig.getConfigurationSection("maps." + mapName + ".spawns").getKeys(false)){
             System.out.println("Start of a loop");
             spawns.put(string, new Location(
                     Bukkit.getWorld(mapName),
-                    mapConfig.getDouble("maps." + mapName + "." + string + ".x"),
-                    mapConfig.getDouble("maps." + mapName + "." + string + ".y"),
-                    mapConfig.getDouble("maps." + mapName + "." + string + ".z"),
-                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".yaw"),
-                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".pitch")
+                    mapConfig.getDouble("maps." + mapName + ".spawns." + string + ".x"),
+                    mapConfig.getDouble("maps." + mapName + ".spawns." + string + ".y"),
+                    mapConfig.getDouble("maps." + mapName + ".spawns." + string + ".z"),
+                    (float) mapConfig.getDouble("maps." + mapName + ".spawns." + string + ".yaw"),
+                    (float) mapConfig.getDouble("maps." + mapName + ".spawns." + string + ".pitch")
             ));
             System.out.println(string + " : " + spawns.get(string));
         }

@@ -6,28 +6,23 @@ import com.cosmolotl.paintballgame.items.BulletMaker;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
-import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Snowball;
 import org.bukkit.util.Vector;
 
-import java.sql.Array;
-import java.util.ArrayList;
-import java.util.List;
-
-public class SubMachineGun extends Gun {
+public class ShotGun extends Gun{
 
     BulletMaker bulletMaker = new BulletMaker();
     PaintballGame paintballGame;
 
-    public SubMachineGun (PaintballGame paintballGame){
+    public ShotGun (PaintballGame paintballGame){
         this.paintballGame = paintballGame;
     }
 
     @Override
     public void startShoot(Player player, Team playerTeam)  {
 
-        int[] waves = {0, 2};
+        int[] waves = {0};
         for (int num : waves){
             Bukkit.getScheduler().runTaskLater(paintballGame, new Runnable() {
                 @Override
@@ -39,12 +34,12 @@ public class SubMachineGun extends Gun {
     }
 
     private void shoot(Player player, Team playerTeam){
-        int numBullets = 1; // Number of bullets to spawn
-        double spreadHorizontal = 12.0; // Horizontal spread angle for the bullets (in degrees)
-        double spreadVertical = 7.0; // Vertical spread angle for the bullets (in degrees)
+        int numBullets = 8; // Number of bullets to spawn
+        double spreadHorizontal = 14.0; // Horizontal spread angle for the bullets (in degrees)
+        double spreadVertical = 12.0; // Vertical spread angle for the bullets (in degrees)
 
         Location playerLocation = player.getLocation().add(0, 1.62, 0);
-
+        player.playSound(playerLocation, Sound.ENTITY_GENERIC_EXPLODE, .6f, 2.5f);
         for (int i = 0; i < numBullets; i++) {
             // Apply random horizontal and vertical spreads to the bullet direction
             Vector spread = getRandomSpread(spreadHorizontal, spreadVertical, player);
@@ -72,12 +67,10 @@ public class SubMachineGun extends Gun {
     }
 
     private void spawnBulletProjectile(Location location, Vector direction, Player player, Team playerTeam) {
-        player.playSound(location, Sound.ENTITY_ARROW_SHOOT, 1, 1f);
         // Spawn a projectile (Snowball) and set its velocity
         Snowball snowball = location.getWorld().spawn(location, Snowball.class);
-        snowball.setItem(bulletMaker.makeBullet(playerTeam, 3));
-        snowball.setVelocity(direction.multiply(1.2)); // Set velocity (adjust as needed)
+        snowball.setItem(bulletMaker.makeBullet(playerTeam, 4));
+        snowball.setVelocity(direction.multiply(1.0)); // Set velocity (adjust as needed)
         snowball.setShooter(player); // Set shooter to null to avoid player damage
     }
-
 }

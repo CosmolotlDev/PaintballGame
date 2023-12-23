@@ -11,6 +11,16 @@ public enum GunType {
             2,
             "Sub Machine Gun",
             195L
+    ),
+    SHOTGUN(
+            3,
+                    "Shotgun",
+                    995L
+    ),
+    SNIPER_GUN(
+            4,
+                    "Sniper",
+                    1995L
     );
 
     private int customModel;

@@ -7,7 +7,6 @@ import com.cosmolotl.paintballgame.enums.PlayerSelector;
 import com.cosmolotl.paintballgame.enums.Team;
 import com.cosmolotl.paintballgame.enums.maps.TurfWarMap;
 import com.cosmolotl.paintballgame.games.gamelisteners.GunListener;
-import com.cosmolotl.paintballgame.guns.ClassicGun;
 import com.cosmolotl.paintballgame.instance.Game;
 import com.cosmolotl.paintballgame.items.BulletMaker;
 import com.cosmolotl.paintballgame.items.GunMaker;
@@ -134,8 +133,10 @@ public class TurfWar extends Game {
         if (teams.keySet().contains(player.getUniqueId())){
             // Give Items
             if (giveKit){
-                player.getInventory().addItem(gunMaker.makeBasicGun(teams.get(player.getUniqueId()), GunType.CLASSIC_GUN));
-                player.getInventory().addItem(gunMaker.makeBasicGun(teams.get(player.getUniqueId()), GunType.SUB_MACHINE_GUN));
+                player.getInventory().addItem(gunMaker.makeGun(teams.get(player.getUniqueId()), GunType.CLASSIC_GUN));
+                player.getInventory().addItem(gunMaker.makeGun(teams.get(player.getUniqueId()), GunType.SUB_MACHINE_GUN));
+                player.getInventory().addItem(gunMaker.makeGun(teams.get(player.getUniqueId()), GunType.SHOTGUN));
+                player.getInventory().addItem(gunMaker.makeGun(teams.get(player.getUniqueId()), GunType.SNIPER_GUN));
                 player.getInventory().setHelmet(hatMaker.MakeHat(getTeam(player), true));
             }
 
@@ -299,15 +300,15 @@ public class TurfWar extends Game {
         FileConfiguration mapConfig = MapManager.mapConfig;
         String mapName = turfWarMap.name().toLowerCase();
         System.out.println(mapName);
-        for (String string : mapConfig.getConfigurationSection("maps." + mapName).getKeys(false)){
+        for (String string : mapConfig.getConfigurationSection("maps." + mapName + ".spawns").getKeys(false)){
             System.out.println("Start of a loop");
             spawns.put(string, new Location(
                     Bukkit.getWorld(mapName),
-                    mapConfig.getDouble("maps." + mapName + "." + string + ".x"),
-                    mapConfig.getDouble("maps." + mapName + "." + string + ".y"),
-                    mapConfig.getDouble("maps." + mapName + "." + string + ".z"),
-                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".yaw"),
-                    (float) mapConfig.getDouble("maps." + mapName + "." + string + ".pitch")
+                    mapConfig.getDouble("maps." + mapName + ".spawns." + string + ".x"),
+                    mapConfig.getDouble("maps." + mapName + ".spawns." + string + ".y"),
+                    mapConfig.getDouble("maps." + mapName + ".spawns." + string + ".z"),
+                    (float) mapConfig.getDouble("maps." + mapName + ".spawns." + string + ".yaw"),
+                    (float) mapConfig.getDouble("maps." + mapName + ".spawns." + string + ".pitch")
             ));
             System.out.println(string + " : " + spawns.get(string));
         }
